@@ -36,21 +36,21 @@ A **Retrieval-Augmented Generation (RAG)** application for Stoke Space and Boltl
 ## Setup
 
 ```bash
-# Root env
 cp .env.example .env
-
-# Client env
-cp client/.env.example client/.env
 ```
 
-Edit both `.env` files and set:
+Edit **`.env`** at the repo root and set:
 
-| File | Variable | Value |
-|------|----------|-------|
-| `.env` | `OPENAI_API_KEY` | Your OpenAI key |
-| `.env` | `SESSION_SECRET` | Run: `openssl rand -hex 32` |
-| `.env` | `GOOGLE_CLIENT_ID` | From Google Cloud Console |
-| `client/.env` | `VITE_GOOGLE_CLIENT_ID` | Same value as `GOOGLE_CLIENT_ID` |
+| Variable | Value |
+|----------|-------|
+| `OPENAI_API_KEY` | Your OpenAI key |
+| `SESSION_SECRET` | Run: `openssl rand -hex 32` |
+| `GOOGLE_CLIENT_ID` | From Google Cloud Console (server) |
+| `VITE_GOOGLE_CLIENT_ID` | **Same string** as `GOOGLE_CLIENT_ID` (browser / Vite) |
+
+Vite is configured with `envDir` pointing at the repo root, so you do **not** need a separate `client/.env` unless you want to override something locally.
+
+**If sign-in still fails:** confirm both IDs are identical (no extra spaces), then restart `npm run dev` so Vite reloads env.
 
 Then install and build the index:
 

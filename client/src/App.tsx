@@ -42,8 +42,13 @@ function SignInView({
 }) {
   const btnRef = useRef<HTMLDivElement>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [browserOrigin, setBrowserOrigin] = useState("");
   const handlerRef = useRef({ onCredential, setErr });
   handlerRef.current = { onCredential, setErr };
+
+  useEffect(() => {
+    setBrowserOrigin(window.location.origin);
+  }, []);
 
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID) return;
@@ -90,8 +95,9 @@ function SignInView({
       <div className="signin-view">
         <h1>Boltline RAG</h1>
         <p className="signin-error">
-          <code>VITE_GOOGLE_CLIENT_ID</code> is not set. Add it to your{" "}
-          <code>.env</code> file and restart the dev server.
+          <code>VITE_GOOGLE_CLIENT_ID</code> is not set. Add it to the <strong>repo root</strong>{" "}
+          <code>.env</code> (same value as <code>GOOGLE_CLIENT_ID</code>) and restart{" "}
+          <code>npm run dev</code>.
         </p>
       </div>
     );
@@ -107,9 +113,25 @@ function SignInView({
         </p>
       ) : null}
       <p className="signin-hint">
-        If Google shows <strong>origin not allowed</strong>, in Google Cloud Console → OAuth client →
-        <strong> Authorized JavaScript origins</strong>, add <code>http://localhost:5173</code> and
-        (if you use it) <code>http://127.0.0.1:5173</code> — then save and wait a minute.
+        <strong>Your browser origin</strong> must appear under{" "}
+        <strong>Authorized JavaScript origins</strong> (exact match, no path):
+      </p>
+      <p className="signin-origin">
+        <code>{browserOrigin || "…"}</code>
+      </p>
+      <p className="signin-hint">
+        <strong>Client ID in this app</strong> (must match the same OAuth client in Google Cloud):
+      </p>
+      <p className="signin-origin">
+        <code>{GOOGLE_CLIENT_ID}</code>
+      </p>
+      <p className="signin-hint">
+        If Google still says <strong>origin not allowed</strong>, create a <strong>new</strong> OAuth 2.0
+        client (Web application) — old clients can be invalid or scheduled for deletion. Under{" "}
+        <strong>Authorized redirect URIs</strong>, you can use <code>http://localhost:5173</code> or leave
+        redirect URIs empty for the Sign-In button flow; the critical field is{" "}
+        <strong>JavaScript origins</strong>. After saving, wait 1–2 minutes and restart{" "}
+        <code>npm run dev</code>.
       </p>
       <div ref={btnRef} className="google-btn-wrap" />
       {err ? <p className="signin-error">{err}</p> : null}

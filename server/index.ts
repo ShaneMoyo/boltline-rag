@@ -23,6 +23,12 @@ app.set("trust proxy", 1);
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: "64kb" }));
 
+// Register before session middleware: a corrupt/old session cookie can make express-session
+// throw and break every route — this stays reachable for diagnostics and the Vite boot check.
+app.get("/api/health", (_req, res) => {
+  res.json({ ok: true });
+});
+
 const sessionSecret = process.env.SESSION_SECRET;
 if (!sessionSecret) {
   throw new Error("SESSION_SECRET env var is required. Generate one with: openssl rand -hex 32");
@@ -48,10 +54,6 @@ const askLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests — try again in 15 minutes." },
-});
-
-app.get("/api/health", (_req, res) => {
-  res.json({ ok: true });
 });
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
@@ -184,4 +186,11 @@ app.use(
 const port = Number(process.env.PORT) || 3001;
 app.listen(port, () => {
   console.error(`API server listening on http://localhost:${port}`);
+  const gid = process.env.GOOGLE_CLIENT_ID;
+  if (gid) {
+    const tail = gid.slice(-24);
+    console.error(`Google OAuth: GOOGLE_CLIENT_ID loaded (ends with …${tail})`);
+  } else {
+    console.error("Google OAuth: GOOGLE_CLIENT_ID is missing — set it in .env");
+  }
 });

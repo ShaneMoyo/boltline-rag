@@ -9,22 +9,56 @@ export type AuthUser = {
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [bootError, setBootError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/auth/me", { credentials: "include" })
-      .then(async (r) => {
-        if (!r.ok) return null;
-        const text = await r.text();
-        if (!text) return null;
-        try {
-          return JSON.parse(text) as { user?: AuthUser };
-        } catch {
-          return null;
+    (async () => {
+      try {
+        const health = await fetch("/api/health");
+        if (!health.ok) {
+          setBootError(
+            `API is not responding (${health.status}). From the project root run: npm run dev — that starts the server on port 3001 and this UI on 5173.`
+          );
+          return;
         }
-      })
-      .then((data) => setUser(data?.user ?? null))
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false));
+        const me = await fetch("/api/auth/me", { credentials: "include" });
+        if (me.ok) {
+          const text = await me.text();
+          if (!text) {
+            setUser(null);
+            return;
+          }
+          try {
+            const data = JSON.parse(text) as { user?: AuthUser };
+            setUser(data.user ?? null);
+          } catch {
+            setUser(null);
+          }
+          return;
+        }
+        if (me.status === 401) {
+          setUser(null);
+          return;
+        }
+        const errText = await me.text();
+        let msg = `Session check failed (${me.status}).`;
+        if (errText) {
+          try {
+            const j = JSON.parse(errText) as { error?: string };
+            if (j.error) msg = j.error;
+          } catch {
+            msg = errText.slice(0, 200);
+          }
+        }
+        setBootError(msg);
+      } catch {
+        setBootError(
+          "Cannot reach the API. From the project root run: npm run dev (needs port 3001 + 5173)."
+        );
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   const signInWithGoogle = useCallback(async (credential: string) => {
@@ -53,5 +87,5 @@ export function useAuth() {
     setUser(null);
   }, []);
 
-  return { user, loading, signInWithGoogle, signOut };
+  return { user, loading, bootError, signInWithGoogle, signOut };
 }

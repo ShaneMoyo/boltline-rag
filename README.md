@@ -21,8 +21,9 @@ A **Retrieval-Augmented Generation (RAG)** application for Stoke Space and Boltl
 2. Create a project (or select an existing one)
 3. **APIs & Services → Credentials → Create Credentials → OAuth 2.0 Client ID**
 4. Application type: **Web application**
-5. Add to **Authorized JavaScript origins**:
-   - `http://localhost:5173` (local dev)
+5. Add to **Authorized JavaScript origins** (each is a different origin — add every URL you actually open in the browser):
+   - `http://localhost:5173` (local dev if you use “localhost”)
+   - `http://127.0.0.1:5173` (add this too if you ever open the app via 127.0.0.1)
    - `https://your-deployed-app.com` (production)
 6. Copy the **Client ID** (looks like `1234567890-abc.apps.googleusercontent.com`)
 

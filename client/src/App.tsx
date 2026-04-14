@@ -33,7 +33,13 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undef
 /** GSI `initialize` must run once per page; React Strict Mode mounts twice otherwise. */
 let gsiInitialized = false;
 
-function SignInView({ onCredential }: { onCredential: (c: string) => Promise<void> }) {
+function SignInView({
+  bootError,
+  onCredential,
+}: {
+  bootError: string | null;
+  onCredential: (c: string) => Promise<void>;
+}) {
   const btnRef = useRef<HTMLDivElement>(null);
   const [err, setErr] = useState<string | null>(null);
   const handlerRef = useRef({ onCredential, setErr });
@@ -95,6 +101,16 @@ function SignInView({ onCredential }: { onCredential: (c: string) => Promise<voi
     <div className="signin-view">
       <h1>Boltline RAG</h1>
       <p className="signin-subtitle">Sign in to continue</p>
+      {bootError ? (
+        <p className="signin-error">
+          <strong>API:</strong> {bootError}
+        </p>
+      ) : null}
+      <p className="signin-hint">
+        If Google shows <strong>origin not allowed</strong>, in Google Cloud Console → OAuth client →
+        <strong> Authorized JavaScript origins</strong>, add <code>http://localhost:5173</code> and
+        (if you use it) <code>http://127.0.0.1:5173</code> — then save and wait a minute.
+      </p>
       <div ref={btnRef} className="google-btn-wrap" />
       {err ? <p className="signin-error">{err}</p> : null}
     </div>
@@ -102,7 +118,7 @@ function SignInView({ onCredential }: { onCredential: (c: string) => Promise<voi
 }
 
 export default function App() {
-  const { user, loading, signInWithGoogle, signOut } = useAuth();
+  const { user, loading, bootError, signInWithGoogle, signOut } = useAuth();
   const [question, setQuestion] = useState("");
   const [topK, setTopK] = useState(5);
   const [asking, setAsking] = useState(false);
@@ -136,7 +152,7 @@ export default function App() {
 
   if (loading) return <div className="splash">Loading…</div>;
 
-  if (!user) return <SignInView onCredential={signInWithGoogle} />;
+  if (!user) return <SignInView bootError={bootError} onCredential={signInWithGoogle} />;
 
   return (
     <div className="app">

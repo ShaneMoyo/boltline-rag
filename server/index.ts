@@ -15,6 +15,21 @@ declare module "express-session" {
   }
 }
 
+function getSessionSecret(): string {
+  const s = process.env.SESSION_SECRET?.trim();
+  if (s) return s;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "SESSION_SECRET env var is required in production. Generate one with: openssl rand -hex 32"
+    );
+  }
+  console.warn(
+    "SESSION_SECRET is not set — using a fixed dev-only default so the API can start. " +
+      "Set SESSION_SECRET in .env for stable sessions across restarts."
+  );
+  return "dev-only-insecure-session-secret-do-not-use-in-production";
+}
+
 const app = express();
 
 // Vite dev proxy sends X-Forwarded-*; trust proxy avoids mis-detection and satisfies express-rate-limit
@@ -29,10 +44,7 @@ app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
 });
 
-const sessionSecret = process.env.SESSION_SECRET;
-if (!sessionSecret) {
-  throw new Error("SESSION_SECRET env var is required. Generate one with: openssl rand -hex 32");
-}
+const sessionSecret = getSessionSecret();
 
 app.use(
   session({

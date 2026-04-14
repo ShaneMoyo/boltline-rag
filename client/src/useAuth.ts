@@ -17,7 +17,7 @@ export function useAuth() {
         const health = await fetch("/api/health");
         if (!health.ok) {
           setBootError(
-            `API is not responding (${health.status}). From the project root run: npm run dev — that starts the server on port 3001 and this UI on 5173.`
+            `API returned ${health.status}. From the repo root run: npm run dev (starts API on 3001 and Vite on 5173). Avoid only dev:client. Check the terminal for crash logs.`
           );
           return;
         }

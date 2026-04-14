@@ -44,7 +44,7 @@ Edit **`.env`** at the repo root and set:
 | Variable | Value |
 |----------|-------|
 | `OPENAI_API_KEY` | Your OpenAI key |
-| `SESSION_SECRET` | Run: `openssl rand -hex 32` |
+| `SESSION_SECRET` | Run: `openssl rand -hex 32` (recommended in dev too; if omitted in dev, a fixed fallback is used so the server still starts) |
 | `GOOGLE_CLIENT_ID` | From Google Cloud Console (server) |
 | `VITE_GOOGLE_CLIENT_ID` | **Same string** as `GOOGLE_CLIENT_ID` (browser / Vite) |
 

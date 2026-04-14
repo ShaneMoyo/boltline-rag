@@ -21,6 +21,18 @@ export function useAuth() {
           );
           return;
         }
+        let healthJson: { ok?: boolean; sessionConfigured?: boolean } = {};
+        try {
+          healthJson = (await health.json()) as typeof healthJson;
+        } catch {
+          /* ignore */
+        }
+        if (healthJson.sessionConfigured === false) {
+          setBootError(
+            "SESSION_SECRET is not set on the server. In Vercel: Project → Settings → Environment Variables → add SESSION_SECRET (run openssl rand -hex 32), save, then Redeploy."
+          );
+          return;
+        }
         const me = await fetch("/api/auth/me", { credentials: "include" });
         if (me.ok) {
           const text = await me.text();

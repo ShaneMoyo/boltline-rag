@@ -15,13 +15,15 @@ declare module "express-session" {
   }
 }
 
-function getSessionSecret(): string {
+/** In production, missing SESSION_SECRET returns null so the app still boots (health + clear 503 on auth). */
+function resolveSessionSecret(): string | null {
   const s = process.env.SESSION_SECRET?.trim();
   if (s) return s;
   if (process.env.NODE_ENV === "production") {
-    throw new Error(
-      "SESSION_SECRET env var is required in production. Generate one with: openssl rand -hex 32"
+    console.warn(
+      "SESSION_SECRET is not set — auth routes return 503 until you add it (e.g. Vercel → Environment Variables)."
     );
+    return null;
   }
   console.warn(
     "SESSION_SECRET is not set — using a fixed dev-only default so the API can start. " +
@@ -38,128 +40,139 @@ export function createApp(): express.Express {
   app.use(cors({ origin: true, credentials: true }));
   app.use(express.json({ limit: "64kb" }));
 
+  const sessionSecret = resolveSessionSecret();
+
   app.get("/api/health", (_req, res) => {
-    res.json({ ok: true });
+    res.json({ ok: true, sessionConfigured: sessionSecret !== null });
   });
 
-  const sessionSecret = getSessionSecret();
-
-  app.use(
-    session({
-      secret: sessionSecret,
-      resave: false,
-      saveUninitialized: false,
-      cookie: {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      },
-    })
-  );
-
-  const askLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 20,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: "Too many requests — try again in 15 minutes." },
-  });
-
-  const googleClientId = process.env.GOOGLE_CLIENT_ID;
-  const googleClient = googleClientId ? new OAuth2Client(googleClientId) : null;
-
-  app.post("/api/auth/google", async (req, res) => {
-    if (!googleClient || !googleClientId) {
-      res.status(501).json({ error: "Google auth is not configured on this server." });
-      return;
-    }
-    const { credential } = req.body as { credential?: string };
-    if (!credential) {
-      res.status(400).json({ error: "Missing credential." });
-      return;
-    }
-    try {
-      const ticket = await googleClient.verifyIdToken({
-        idToken: credential,
-        audience: googleClientId,
+  if (!sessionSecret) {
+    const noSession = (_req: express.Request, res: express.Response) => {
+      res.status(503).json({
+        error:
+          "SESSION_SECRET is not set on the server. In Vercel: Project → Settings → Environment Variables → add SESSION_SECRET (e.g. run openssl rand -hex 32 locally), save, then redeploy.",
       });
-      const payload = ticket.getPayload();
-      if (!payload?.email) {
-        res.status(401).json({ error: "Invalid Google token." });
+    };
+    app.use("/api/auth", noSession);
+    app.post("/api/ask", noSession);
+  } else {
+    app.use(
+      session({
+        secret: sessionSecret,
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+        },
+      })
+    );
+
+    const askLimiter = rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 20,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { error: "Too many requests — try again in 15 minutes." },
+    });
+
+    const googleClientId = process.env.GOOGLE_CLIENT_ID;
+    const googleClient = googleClientId ? new OAuth2Client(googleClientId) : null;
+
+    app.post("/api/auth/google", async (req, res) => {
+      if (!googleClient || !googleClientId) {
+        res.status(501).json({ error: "Google auth is not configured on this server." });
         return;
       }
-      req.session.user = {
-        email: payload.email,
-        name: payload.name ?? payload.email,
-        picture: payload.picture ?? "",
-      };
-      req.session.save((saveErr) => {
-        if (saveErr) {
-          console.error(saveErr);
-          res.status(500).json({ error: "Could not create session." });
+      const { credential } = req.body as { credential?: string };
+      if (!credential) {
+        res.status(400).json({ error: "Missing credential." });
+        return;
+      }
+      try {
+        const ticket = await googleClient.verifyIdToken({
+          idToken: credential,
+          audience: googleClientId,
+        });
+        const payload = ticket.getPayload();
+        if (!payload?.email) {
+          res.status(401).json({ error: "Invalid Google token." });
           return;
         }
-        res.json({ user: req.session.user });
-      });
-    } catch (e) {
-      console.error(e);
-      res.status(401).json({ error: "Failed to verify Google token." });
-    }
-  });
-
-  app.post("/api/auth/logout", (req, res) => {
-    req.session.destroy(() => {
-      res.json({ ok: true });
+        req.session.user = {
+          email: payload.email,
+          name: payload.name ?? payload.email,
+          picture: payload.picture ?? "",
+        };
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error(saveErr);
+            res.status(500).json({ error: "Could not create session." });
+            return;
+          }
+          res.json({ user: req.session.user });
+        });
+      } catch (e) {
+        console.error(e);
+        res.status(401).json({ error: "Failed to verify Google token." });
+      }
     });
-  });
 
-  app.get("/api/auth/me", (req, res, next) => {
-    try {
-      const user = req.session?.user;
-      if (!user) {
-        res.status(401).json({ error: "Not authenticated." });
+    app.post("/api/auth/logout", (req, res) => {
+      req.session.destroy(() => {
+        res.json({ ok: true });
+      });
+    });
+
+    app.get("/api/auth/me", (req, res, next) => {
+      try {
+        const user = req.session?.user;
+        if (!user) {
+          res.status(401).json({ error: "Not authenticated." });
+          return;
+        }
+        res.json({ user });
+      } catch (e) {
+        next(e);
+      }
+    });
+
+    function requireAuth(
+      req: express.Request,
+      res: express.Response,
+      next: express.NextFunction
+    ): void {
+      if (!req.session?.user) {
+        res.status(401).json({ error: "Sign in with Google to use this app." });
         return;
       }
-      res.json({ user });
-    } catch (e) {
-      next(e);
+      next();
     }
-  });
 
-  function requireAuth(
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction
-  ): void {
-    if (!req.session?.user) {
-      res.status(401).json({ error: "Sign in with Google to use this app." });
-      return;
-    }
-    next();
+    app.post("/api/ask", askLimiter, requireAuth, async (req, res) => {
+      try {
+        const question =
+          typeof req.body?.question === "string" ? req.body.question.trim() : "";
+        const rawTop = req.body?.topK;
+        const topK =
+          typeof rawTop === "number" && Number.isFinite(rawTop)
+            ? Math.min(20, Math.max(1, Math.floor(rawTop)))
+            : 5;
+        if (!question) {
+          res.status(400).json({ error: "Missing or invalid question." });
+          return;
+        }
+        const { answer, sources } = await runRag({ question, topK });
+        res.json({ answer, sources });
+      } catch (e) {
+        console.error(e);
+        const message = e instanceof Error ? e.message : "Unknown error";
+        res.status(500).json({ error: message });
+      }
+    });
   }
-
-  app.post("/api/ask", askLimiter, requireAuth, async (req, res) => {
-    try {
-      const question =
-        typeof req.body?.question === "string" ? req.body.question.trim() : "";
-      const rawTop = req.body?.topK;
-      const topK =
-        typeof rawTop === "number" && Number.isFinite(rawTop)
-          ? Math.min(20, Math.max(1, Math.floor(rawTop)))
-          : 5;
-      if (!question) {
-        res.status(400).json({ error: "Missing or invalid question." });
-        return;
-      }
-      const { answer, sources } = await runRag({ question, topK });
-      res.json({ answer, sources });
-    } catch (e) {
-      console.error(e);
-      const message = e instanceof Error ? e.message : "Unknown error";
-      res.status(500).json({ error: message });
-    }
-  });
 
   const isVercel = Boolean(process.env.VERCEL);
   if (process.env.NODE_ENV === "production" && !isVercel) {

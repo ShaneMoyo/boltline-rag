@@ -94,6 +94,93 @@
   line-height: 1.45;
 }
 
+.tab-row {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 1.25rem;
+  padding: 0.2rem;
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--panel) 85%, var(--border));
+  border: 1px solid var(--border);
+}
+
+.tab {
+  flex: 1;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--text);
+}
+
+.tab-active {
+  background: var(--panel);
+  border-color: var(--border);
+  color: var(--text);
+  box-shadow: 0 1px 2px color-mix(in oklab, #000 25%, transparent);
+}
+
+.doc {
+  margin: 0;
+}
+
+.doc-section {
+  margin-bottom: 1.35rem;
+}
+
+.doc-section:last-child {
+  margin-bottom: 0;
+}
+
+.doc-heading {
+  font-size: 1.05rem;
+  font-weight: 650;
+  margin: 0 0 0.55rem;
+  letter-spacing: -0.02em;
+}
+
+.doc-section p {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.doc-section p:last-child {
+  margin-bottom: 0;
+}
+
+.doc-section code {
+  font-size: 0.86em;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: color-mix(in oklab, var(--border) 55%, transparent);
+}
+
+.doc-list {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.doc-list li {
+  margin-bottom: 0.5rem;
+}
+
+.doc-list li:last-child {
+  margin-bottom: 0;
+}
+
 .panel {
   background: var(--panel);
   border: 1px solid var(--border);

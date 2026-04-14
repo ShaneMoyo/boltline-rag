@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
+import HowItWorks from "./HowItWorks.tsx";
 import { useAuth } from "./useAuth.ts";
 
 declare global {
@@ -115,6 +116,7 @@ function SignInView({
 
 export default function App() {
   const { user, loading, bootError, signInWithGoogle, signOut } = useAuth();
+  const [tab, setTab] = useState<"ask" | "how">("ask");
   const [question, setQuestion] = useState("");
   const [topK, setTopK] = useState(5);
   const [asking, setAsking] = useState(false);
@@ -170,59 +172,92 @@ export default function App() {
         </div>
       </header>
 
-      <section className="panel">
-        <label className="label" htmlFor="q">Question</label>
-        <textarea
-          id="q"
-          className="textarea"
-          rows={3}
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          placeholder='e.g. "How does Boltline talk about traceability?"'
-        />
-        <div className="row">
-          <label className="label inline" htmlFor="k">Chunks (top-k)</label>
-          <input
-            id="k"
-            type="number"
-            min={1}
-            max={20}
-            className="input-num"
-            value={topK}
-            onChange={(e) => setTopK(Number(e.target.value))}
-          />
-          <button type="button" className="btn primary" onClick={ask} disabled={asking}>
-            {asking ? "Asking…" : "Ask"}
-          </button>
-        </div>
-        {error ? <p className="err">{error}</p> : null}
-      </section>
+      <div className="tab-row" role="tablist" aria-label="App view">
+        <button
+          type="button"
+          role="tab"
+          id="tab-ask"
+          aria-selected={tab === "ask"}
+          aria-controls="tab-panel-ask"
+          className={`tab${tab === "ask" ? " tab-active" : ""}`}
+          onClick={() => setTab("ask")}
+        >
+          Ask
+        </button>
+        <button
+          type="button"
+          role="tab"
+          id="tab-how"
+          aria-selected={tab === "how"}
+          aria-controls="tab-panel-how"
+          className={`tab${tab === "how" ? " tab-active" : ""}`}
+          onClick={() => setTab("how")}
+        >
+          How it works
+        </button>
+      </div>
 
-      {result ? (
-        <>
-          <section className="panel answer">
-            <h2>Answer</h2>
-            <div className="prose">{result.answer}</div>
+      {tab === "ask" ? (
+        <div id="tab-panel-ask" role="tabpanel" aria-labelledby="tab-ask">
+          <section className="panel">
+            <label className="label" htmlFor="q">Question</label>
+            <textarea
+              id="q"
+              className="textarea"
+              rows={3}
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              placeholder='e.g. "How does Boltline talk about traceability?"'
+            />
+            <div className="row">
+              <label className="label inline" htmlFor="k">Chunks (top-k)</label>
+              <input
+                id="k"
+                type="number"
+                min={1}
+                max={20}
+                className="input-num"
+                value={topK}
+                onChange={(e) => setTopK(Number(e.target.value))}
+              />
+              <button type="button" className="btn primary" onClick={ask} disabled={asking}>
+                {asking ? "Asking…" : "Ask"}
+              </button>
+            </div>
+            {error ? <p className="err">{error}</p> : null}
           </section>
-          <section className="panel sources">
-            <h2>Retrieved context</h2>
-            <p className="hint">
-              Similarity scores are cosine between the question embedding and each chunk.
-            </p>
-            <ul className="source-list">
-              {result.sources.map((s, i) => (
-                <li key={`${s.sourcePath}-${s.chunkIndex}-${i}`} className="source-item">
-                  <div className="source-meta">
-                    <span className="badge">{s.score.toFixed(4)}</span>
-                    <span className="path">{s.sourcePath} #{s.chunkIndex}</span>
-                  </div>
-                  <pre className="snippet">{s.text}</pre>
-                </li>
-              ))}
-            </ul>
-          </section>
-        </>
-      ) : null}
+
+          {result ? (
+            <>
+              <section className="panel answer">
+                <h2>Answer</h2>
+                <div className="prose">{result.answer}</div>
+              </section>
+              <section className="panel sources">
+                <h2>Retrieved context</h2>
+                <p className="hint">
+                  Similarity scores are cosine between the question embedding and each chunk.
+                </p>
+                <ul className="source-list">
+                  {result.sources.map((s, i) => (
+                    <li key={`${s.sourcePath}-${s.chunkIndex}-${i}`} className="source-item">
+                      <div className="source-meta">
+                        <span className="badge">{s.score.toFixed(4)}</span>
+                        <span className="path">{s.sourcePath} #{s.chunkIndex}</span>
+                      </div>
+                      <pre className="snippet">{s.text}</pre>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            </>
+          ) : null}
+        </div>
+      ) : (
+        <div id="tab-panel-how" role="tabpanel" aria-labelledby="tab-how">
+          <HowItWorks />
+        </div>
+      )}
     </div>
   );
 }

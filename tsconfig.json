@@ -11,5 +11,13 @@
     "isolatedModules": true,
     "esModuleInterop": true
   },
-  "include": ["src/**/*.ts", "server/**/*.ts", "api/**/*.ts"]
+  "include": [
+    "src/**/*.ts",
+    "server/**/*.ts",
+    "api/**/*.ts",
+    "vitest.config.ts",
+    "server/**/*.test.ts",
+    "server/**/*.integration.test.ts",
+    "src/**/*.test.ts"
+  ]
 }

@@ -1,0 +1,12 @@
+---
+description: Never add Made-with Cursor trailers to git commits
+alwaysApply: true
+---
+
+# Git commit messages
+
+- **Do not** append `Made-with: Cursor`, `Co-authored-by: Cursor`, or any similar Cursor-branded trailer to commit messages—whether drafting commits, amending, or suggesting messages for the user to paste.
+- Prefer a **single-line** subject (≤ ~72 characters) unless the user asks for a body.
+- If the user pastes a message that already includes such a trailer, strip it before using it.
+
+The editor may still add a footer via **Cursor Settings**; this rule only governs agent-authored text. To stop automatic footers on your commits globally, search settings for **git** / **commit** / **footer** and disable the Cursor commit suffix if present.

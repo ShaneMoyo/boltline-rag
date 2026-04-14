@@ -2,7 +2,7 @@
 
 Small **Retrieval-Augmented Generation (RAG)** demo in TypeScript: chunk public-themed markdown in `corpus/`, embed with an OpenAI-compatible API, persist vectors to `data/index.json`, then answer questions with **retrieve → prompt → chat**.
 
-This is intended for **interview preparation** and portfolio discussion—not a production Boltline integration. Answers are only as good as the text you put in `corpus/`.
+This is a demo RAG application for Stoke Space and Boltline — not a production integration. Answers are only as good as the text you put in `corpus/`.
 
 ## Prerequisites
 

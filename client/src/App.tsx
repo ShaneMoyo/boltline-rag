@@ -55,7 +55,7 @@ export default function App() {
       <header className="header">
         <h1>Boltline RAG</h1>
         <p className="subtitle">
-          Interview prep over your local corpus — answers are grounded in retrieved snippets.
+          Ask anything about Stoke Space and Boltline — answers are grounded in retrieved snippets.
         </p>
       </header>
 

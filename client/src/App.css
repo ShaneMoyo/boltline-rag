@@ -1,3 +1,46 @@
+.splash {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+.signin-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  gap: 1.25rem;
+  padding: 2rem;
+}
+
+.signin-view h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+.signin-subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+.google-btn-wrap {
+  margin-top: 0.5rem;
+}
+
+.signin-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
 .app {
   max-width: 44rem;
   margin: 0 auto;
@@ -5,14 +48,42 @@
 }
 
 .header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
   margin-bottom: 1.75rem;
+  flex-wrap: wrap;
 }
 
-.header h1 {
+.header-left h1 {
   font-size: 1.75rem;
   font-weight: 650;
   letter-spacing: -0.02em;
   margin: 0 0 0.35rem;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-name {
+  font-size: 0.875rem;
+  color: var(--muted);
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .subtitle {

@@ -1,5 +1,20 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "./App.css";
+import { useAuth } from "./useAuth.ts";
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (opts: { client_id: string; callback: (r: { credential: string }) => void }) => void;
+          renderButton: (el: HTMLElement, opts: object) => void;
+          prompt: () => void;
+        };
+      };
+    };
+  }
+}
 
 type Source = {
   sourcePath: string;
@@ -13,56 +28,127 @@ type AskResponse = {
   sources: Source[];
 };
 
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+
+function SignInView({ onCredential }: { onCredential: (c: string) => Promise<void> }) {
+  const btnRef = useRef<HTMLDivElement>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!GOOGLE_CLIENT_ID) return;
+    const tryRender = () => {
+      if (!window.google || !btnRef.current) return;
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: async ({ credential }) => {
+          try {
+            await onCredential(credential);
+          } catch (e) {
+            setErr(e instanceof Error ? e.message : "Sign-in failed.");
+          }
+        },
+      });
+      window.google.accounts.id.renderButton(btnRef.current, {
+        theme: "filled_black",
+        size: "large",
+        shape: "pill",
+        text: "signin_with",
+      });
+    };
+    if (window.google) {
+      tryRender();
+    } else {
+      const id = setInterval(() => {
+        if (window.google) {
+          clearInterval(id);
+          tryRender();
+        }
+      }, 100);
+      return () => clearInterval(id);
+    }
+  }, [onCredential]);
+
+  if (!GOOGLE_CLIENT_ID) {
+    return (
+      <div className="signin-view">
+        <h1>Boltline RAG</h1>
+        <p className="signin-error">
+          <code>VITE_GOOGLE_CLIENT_ID</code> is not set. Add it to your{" "}
+          <code>.env</code> file and restart the dev server.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="signin-view">
+      <h1>Boltline RAG</h1>
+      <p className="signin-subtitle">Sign in to continue</p>
+      <div ref={btnRef} className="google-btn-wrap" />
+      {err ? <p className="signin-error">{err}</p> : null}
+    </div>
+  );
+}
+
 export default function App() {
+  const { user, loading, signInWithGoogle, signOut } = useAuth();
   const [question, setQuestion] = useState("");
   const [topK, setTopK] = useState(5);
-  const [loading, setLoading] = useState(false);
+  const [asking, setAsking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AskResponse | null>(null);
 
   const ask = useCallback(async () => {
     const q = question.trim();
-    if (!q) {
-      setError("Enter a question.");
-      return;
-    }
-    setLoading(true);
+    if (!q) { setError("Enter a question."); return; }
+    setAsking(true);
     setError(null);
     setResult(null);
     try {
       const res = await fetch("/api/ask", {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: q, topK }),
       });
       const data = (await res.json()) as { error?: string } & Partial<AskResponse>;
-      if (!res.ok) {
-        throw new Error(data.error ?? res.statusText);
-      }
-      if (typeof data.answer !== "string" || !Array.isArray(data.sources)) {
+      if (!res.ok) throw new Error(data.error ?? res.statusText);
+      if (typeof data.answer !== "string" || !Array.isArray(data.sources))
         throw new Error("Unexpected response from server.");
-      }
       setResult({ answer: data.answer, sources: data.sources });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Request failed.");
     } finally {
-      setLoading(false);
+      setAsking(false);
     }
   }, [question, topK]);
+
+  if (loading) return <div className="splash">Loading…</div>;
+
+  if (!user) return <SignInView onCredential={signInWithGoogle} />;
 
   return (
     <div className="app">
       <header className="header">
-        <h1>Boltline RAG</h1>
-        <p className="subtitle">
-          Ask anything about Stoke Space and Boltline — answers are grounded in retrieved snippets.
-        </p>
+        <div className="header-left">
+          <h1>Boltline RAG</h1>
+          <p className="subtitle">
+            Ask anything about Stoke Space and Boltline — answers are grounded in retrieved snippets.
+          </p>
+        </div>
+        <div className="header-right">
+          {user.picture && (
+            <img className="avatar" src={user.picture} alt={user.name} referrerPolicy="no-referrer" />
+          )}
+          <span className="user-name">{user.name}</span>
+          <button type="button" className="btn" onClick={signOut}>
+            Sign out
+          </button>
+        </div>
       </header>
 
       <section className="panel">
-        <label className="label" htmlFor="q">
-          Question
-        </label>
+        <label className="label" htmlFor="q">Question</label>
         <textarea
           id="q"
           className="textarea"
@@ -71,11 +157,8 @@ export default function App() {
           onChange={(e) => setQuestion(e.target.value)}
           placeholder='e.g. "How does Boltline talk about traceability?"'
         />
-
         <div className="row">
-          <label className="label inline" htmlFor="k">
-            Chunks (top-k)
-          </label>
+          <label className="label inline" htmlFor="k">Chunks (top-k)</label>
           <input
             id="k"
             type="number"
@@ -85,11 +168,10 @@ export default function App() {
             value={topK}
             onChange={(e) => setTopK(Number(e.target.value))}
           />
-          <button type="button" className="btn primary" onClick={ask} disabled={loading}>
-            {loading ? "Asking…" : "Ask"}
+          <button type="button" className="btn primary" onClick={ask} disabled={asking}>
+            {asking ? "Asking…" : "Ask"}
           </button>
         </div>
-
         {error ? <p className="err">{error}</p> : null}
       </section>
 
@@ -99,7 +181,6 @@ export default function App() {
             <h2>Answer</h2>
             <div className="prose">{result.answer}</div>
           </section>
-
           <section className="panel sources">
             <h2>Retrieved context</h2>
             <p className="hint">
@@ -110,9 +191,7 @@ export default function App() {
                 <li key={`${s.sourcePath}-${s.chunkIndex}-${i}`} className="source-item">
                   <div className="source-meta">
                     <span className="badge">{s.score.toFixed(4)}</span>
-                    <span className="path">
-                      {s.sourcePath} #{s.chunkIndex}
-                    </span>
+                    <span className="path">{s.sourcePath} #{s.chunkIndex}</span>
                   </div>
                   <pre className="snippet">{s.text}</pre>
                 </li>

@@ -1,0 +1,9 @@
+#!/bin/sh
+# Removes Cursor-injected trailer lines. Enable once: git config core.hooksPath .githooks
+set -e
+msgfile="${1:?}"
+[ -f "$msgfile" ] || exit 0
+tmp="${msgfile}.tmp"
+if awk '!/^Made-with: Cursor$/ { print }' "$msgfile" > "$tmp"; then
+  mv "$tmp" "$msgfile"
+fi

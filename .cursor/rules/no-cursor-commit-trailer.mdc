@@ -1,12 +1,34 @@
 ---
-description: Never add Made-with Cursor trailers to git commits
+description: No Cursor commit footer; use git hook (agent rules cannot block the editor)
 alwaysApply: true
 ---
 
 # Git commit messages
 
-- **Do not** append `Made-with: Cursor`, `Co-authored-by: Cursor`, or any similar Cursor-branded trailer to commit messages—whether drafting commits, amending, or suggesting messages for the user to paste.
-- Prefer a **single-line** subject (≤ ~72 characters) unless the user asks for a body.
-- If the user pastes a message that already includes such a trailer, strip it before using it.
+## Why this rule is not enough by itself
 
-The editor may still add a footer via **Cursor Settings**; this rule only governs agent-authored text. To stop automatic footers on your commits globally, search settings for **git** / **commit** / **footer** and disable the Cursor commit suffix if present.
+Cursor can **append a footer** when you commit from the **Source Control UI** (e.g. `Made-with: Cursor`). That happens **inside the editor**, after the AI finishes—**project rules do not run there**. So:
+
+- The AI must still **never** suggest or paste that footer in commit text.
+- **Enforcement** for normal `git commit` is the repo **Git hook** below—not this file alone.
+
+## Repo enforcement (required for contributors)
+
+This repository sets **`core.hooksPath`** to **`.githooks`**. The **`.githooks/commit-msg`** script **deletes** any line that is exactly `Made-with: Cursor` before the commit is recorded.
+
+After cloning, run once (or rely on `npm install` if `prepare` is configured):
+
+```bash
+./scripts/setup-git-hooks.sh
+```
+
+If hooks are not installed, run the command above; commits from Cursor may include the footer again.
+
+## Optional: Cursor app setting
+
+In **Cursor Settings**, search for **git** / **commit** and disable any option that appends a **custom commit suffix** or **“Made with Cursor”** footer (wording varies by version).
+
+## Style
+
+- Prefer a **single-line** subject (about 72 characters) unless the user asks for a body.
+- If editing a message that contains `Made-with: Cursor`, remove that line.

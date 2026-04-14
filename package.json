@@ -10,6 +10,7 @@
     "client"
   ],
   "scripts": {
+    "prepare": "test -d .git && git config core.hooksPath .githooks 2>/dev/null || true",
     "rag:ingest": "tsx src/ingest.ts",
     "rag:ask": "tsx src/query.ts",
     "dev": "concurrently -k \"npm run dev:server\" \"npm run dev:client\"",

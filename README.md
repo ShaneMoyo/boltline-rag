@@ -97,6 +97,23 @@ The build command is `npm run build` and the start command is `npm start`.
 
 The `VITE_GOOGLE_CLIENT_ID` variable must be set **at build time** (it's baked into the client bundle). On Railway/Render, add it as an env var before triggering a build.
 
+## Deployment (Vercel)
+
+The repo includes [`vercel.json`](vercel.json): the Vite app is built to `client/dist`, and `/api/*` is routed to the Express app in [`api/index.ts`](api/index.ts). In production, `createApp()` does not mount `express.static` (Vercel serves `client/dist` from the build output).
+
+1. **Create a project:** In the [Vercel dashboard](https://vercel.com/new), import this Git repo (or run `npx vercel` from the repo root and link the project).
+2. **Environment variables** (Project → Settings → Environment Variables). Set for **Production** (and **Preview** if you want previews to work):
+   - `OPENAI_API_KEY`
+   - `SESSION_SECRET` (e.g. `openssl rand -hex 32`)
+   - `GOOGLE_CLIENT_ID` (server-side token verification)
+   - `VITE_GOOGLE_CLIENT_ID` — **same value** as `GOOGLE_CLIENT_ID` (required at **build** time for the browser bundle)
+3. **Embeddings index:** `data/index.json` is gitignored. Either:
+   - **Build-time ingest:** set **Build Command** to `npm run rag:ingest && npm run build` and ensure `OPENAI_API_KEY` is available to the build (same env var is enough), or
+   - **Commit a built index:** remove `data/index.json` from `.gitignore`, run `npm run rag:ingest` locally, commit `data/index.json`, and keep **Build Command** as `npm run build`.
+4. **Google OAuth:** In Google Cloud Console → your Web client → **Authorized JavaScript origins**, add your production origin (e.g. `https://your-app.vercel.app`).
+
+**Caveat:** Sessions use the default in-memory store. On serverless, cookies can hit different instances, so sign-in may feel flaky until you move sessions to a shared store (e.g. Redis). For a demo, it is often acceptable.
+
 ## Security notes
 
 - Sessions are HTTP-only cookies; in production they are `secure` + `sameSite: strict`.

@@ -199,7 +199,7 @@ export default function App() {
 
       {tab === "ask" ? (
         <div id="tab-panel-ask" role="tabpanel" aria-labelledby="tab-ask">
-          <section className="panel">
+          <section className="panel" aria-busy={asking}>
             <label className="label" htmlFor="q">Question</label>
             <textarea
               id="q"
@@ -208,6 +208,7 @@ export default function App() {
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               placeholder='e.g. "How does Boltline talk about traceability?"'
+              disabled={asking}
             />
             <div className="row">
               <label className="label inline" htmlFor="k">Chunks (top-k)</label>
@@ -219,11 +220,18 @@ export default function App() {
                 className="input-num"
                 value={topK}
                 onChange={(e) => setTopK(Number(e.target.value))}
+                disabled={asking}
               />
               <button type="button" className="btn primary" onClick={ask} disabled={asking}>
                 {asking ? "Asking…" : "Ask"}
               </button>
             </div>
+            {asking ? (
+              <div className="ask-loading" role="status" aria-live="polite">
+                <span className="spinner" aria-hidden />
+                <span>Retrieving snippets and generating an answer…</span>
+              </div>
+            ) : null}
             {error ? <p className="err">{error}</p> : null}
           </section>
 

@@ -281,6 +281,32 @@
   outline-offset: 2px;
 }
 
+.ask-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 0.85rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.spinner {
+  display: inline-block;
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: ask-spin 0.65s linear infinite;
+}
+
+@keyframes ask-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .err {
   margin: 0.75rem 0 0;
   color: var(--danger);

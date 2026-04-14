@@ -1,33 +1,53 @@
+/* Color tokens aligned with stokespace.com theme (public app.css variables) */
 :root {
-  color-scheme: light dark;
-  --bg: #0f1419;
-  --panel: #151c24;
-  --border: #2a3441;
-  --text: #e8edf4;
-  --muted: #8b98a8;
-  --accent: #7dd3fc;
-  --danger: #f87171;
+  color-scheme: dark;
+  --stoke-white: #ffffff;
+  --stoke-gray-1: #f1f1f3;
+  --stoke-gray-2: #6d6e83;
+  --stoke-gray-3: #414150;
+  --stoke-gray-4: #24242b;
+  --stoke-gray-5: #131313;
+  --stoke-blue: #2cabe2;
+  --stoke-lt-blue: #6ed1fb;
+  --stoke-orange: #ef8032;
+  --stoke-red: #e23e24;
+  --stoke-grad-blue: linear-gradient(180deg, #4aade9 0%, #6ed1fb 100%);
+
+  --bg: var(--stoke-gray-5);
+  --panel: var(--stoke-gray-4);
+  --border: var(--stoke-gray-3);
+  --text: var(--stoke-gray-1);
+  --muted: var(--stoke-gray-2);
+  --accent: var(--stoke-blue);
+  --accent-muted: var(--stoke-lt-blue);
+  --accent-grad: var(--stoke-grad-blue);
+  --danger: var(--stoke-red);
+  --on-accent: #ffffff;
+
   font-family:
+    "Helvetica Neue",
+    Helvetica,
+    Arial,
+    ui-sans-serif,
     system-ui,
-    -apple-system,
-    "Segoe UI",
-    Roboto,
-    Ubuntu,
-    Cantarell,
-    "Noto Sans",
     sans-serif;
-  line-height: 1.4;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
 }
 
 @media (prefers-color-scheme: light) {
   :root {
-    --bg: #f6f8fb;
+    color-scheme: light;
+    --bg: var(--stoke-gray-1);
     --panel: #ffffff;
-    --border: #d8dee8;
-    --text: #111827;
-    --muted: #5b6470;
-    --accent: #0369a1;
-    --danger: #b91c1c;
+    --border: #d4d5dc;
+    --text: var(--stoke-gray-5);
+    --muted: var(--stoke-gray-2);
+    --accent: #196785;
+    --accent-muted: var(--stoke-blue);
+    --accent-grad: linear-gradient(180deg, #2cabe2 0%, #4aade9 100%);
+    --danger: #c5301e;
+    --on-accent: #ffffff;
   }
 }
 

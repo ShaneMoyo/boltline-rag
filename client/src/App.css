@@ -100,7 +100,7 @@
   margin-bottom: 1.25rem;
   padding: 0.2rem;
   border-radius: 10px;
-  background: color-mix(in oklab, var(--panel) 85%, var(--border));
+  background: color-mix(in oklab, var(--panel) 92%, var(--border));
   border: 1px solid var(--border);
 }
 
@@ -123,9 +123,9 @@
 
 .tab-active {
   background: var(--panel);
-  border-color: var(--border);
+  border-color: var(--accent);
   color: var(--text);
-  box-shadow: 0 1px 2px color-mix(in oklab, #000 25%, transparent);
+  box-shadow: 0 1px 3px color-mix(in oklab, var(--accent) 35%, transparent);
 }
 
 .doc {
@@ -265,10 +265,20 @@
 
 .btn.primary {
   margin-left: auto;
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #0b1020;
+  background: var(--accent-grad);
+  border-color: transparent;
+  color: var(--on-accent);
   font-weight: 600;
+  text-shadow: 0 1px 0 color-mix(in oklab, #000 25%, transparent);
+}
+
+.btn.primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.btn.primary:focus-visible {
+  outline: 2px solid var(--accent-muted);
+  outline-offset: 2px;
 }
 
 .err {

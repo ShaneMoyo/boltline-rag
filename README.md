@@ -1,53 +1,105 @@
-# Boltline / Stoke Space RAG demo
+# Boltline RAG
 
-Small **Retrieval-Augmented Generation (RAG)** demo in TypeScript: chunk public-themed markdown in `corpus/`, embed with an OpenAI-compatible API, persist vectors to `data/index.json`, then answer questions with **retrieve → prompt → chat**.
+A **Retrieval-Augmented Generation (RAG)** application for Stoke Space and Boltline, built with TypeScript, Express, and React. Users sign in with Google, ask questions, and receive answers grounded in the local markdown corpus.
 
-This is a demo RAG application for Stoke Space and Boltline — not a production integration. Answers are only as good as the text you put in `corpus/`.
+## How it works
+
+1. **Ingest:** `corpus/*.md` is chunked, embedded via OpenAI, and written to `data/index.json`.
+2. **Query:** The question is embedded; cosine similarity retrieves top-k chunks; the LLM answers with those snippets as context.
+3. **Auth:** Google Sign-In authenticates users; the server verifies the ID token, creates a session, and guards `/api/ask`.
+4. **Rate limiting:** 20 requests per IP per 15 minutes on `/api/ask`.
 
 ## Prerequisites
 
-- Node.js 20+ (or compatible runtime)
-- An API key for an OpenAI-compatible service with **embeddings** and **chat completions**
+- Node.js 20+
+- An OpenAI API key with billing enabled
+- A Google OAuth 2.0 Client ID (see setup below)
+
+## Google Client ID setup
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com)
+2. Create a project (or select an existing one)
+3. **APIs & Services → Credentials → Create Credentials → OAuth 2.0 Client ID**
+4. Application type: **Web application**
+5. Add to **Authorized JavaScript origins**:
+   - `http://localhost:5173` (local dev)
+   - `https://your-deployed-app.com` (production)
+6. Copy the **Client ID** (looks like `1234567890-abc.apps.googleusercontent.com`)
 
 ## Setup
 
 ```bash
+# Root env
 cp .env.example .env
-# Edit .env and set OPENAI_API_KEY
+
+# Client env
+cp client/.env.example client/.env
+```
+
+Edit both `.env` files and set:
+
+| File | Variable | Value |
+|------|----------|-------|
+| `.env` | `OPENAI_API_KEY` | Your OpenAI key |
+| `.env` | `SESSION_SECRET` | Run: `openssl rand -hex 32` |
+| `.env` | `GOOGLE_CLIENT_ID` | From Google Cloud Console |
+| `client/.env` | `VITE_GOOGLE_CLIENT_ID` | Same value as `GOOGLE_CLIENT_ID` |
+
+Then install and build the index:
+
+```bash
 npm install
+npm run rag:ingest
 ```
 
 ## Usage
 
-Build the vector index from `corpus/*.md`:
+### Local development
 
 ```bash
-npm run rag:ingest
+npm run dev
+# API  → http://localhost:3001
+# UI   → http://localhost:5173 (proxies /api → 3001)
 ```
 
-Ask a question (retrieval runs against `data/index.json`):
+### CLI (no UI)
 
 ```bash
-npm run rag:ask -- "What is Boltline and how does traceability show up in the messaging?"
+npm run rag:ask -- "What is Boltline?"
+npm run rag:ask -- "How does traceability work?" --top-k 3
 ```
 
-Options:
+### Production
 
-- `--top-k` / `-k` — number of chunks to retrieve (default: 5)
-- `--no-sources` — hide the stderr dump of retrieved snippets (stdout is still the model answer)
+```bash
+npm run build   # builds client/dist
+npm start       # serves API + static UI on PORT (default 3001)
+```
 
-## How it works
+## Deployment (Railway / Render / Fly.io)
 
-1. **Ingest:** Markdown is split into overlapping chunks ([`src/chunk.ts`](src/chunk.ts)), embedded ([`src/embed.ts`](src/embed.ts)), and written to [`data/index.json`](data/index.json) ([`src/ingest.ts`](src/ingest.ts)).
-2. **Query:** The question is embedded with the **same** embedding model recorded in the index; cosine similarity picks top‑k chunks ([`src/retrieve.ts`](src/retrieve.ts)); the LLM answers with those snippets as context ([`src/query.ts`](src/query.ts)).
+Set these environment variables on the host:
+
+- `OPENAI_API_KEY`
+- `SESSION_SECRET`
+- `GOOGLE_CLIENT_ID`
+- `NODE_ENV=production`
+- `PORT` (usually auto-set by the host)
+
+The build command is `npm run build` and the start command is `npm start`.
+
+The `VITE_GOOGLE_CLIENT_ID` variable must be set **at build time** (it's baked into the client bundle). On Railway/Render, add it as an env var before triggering a build.
+
+## Security notes
+
+- Sessions are HTTP-only cookies; in production they are `secure` + `sameSite: strict`.
+- `/api/ask` requires a valid session — unauthenticated requests get `401`.
+- Rate limiting caps abuse at 20 requests / 15 min per IP.
+- Set a hard **monthly spending limit** on your OpenAI account as a final backstop.
+- Never commit `.env` files — they are gitignored.
 
 ## Corpus and limitations
 
-- The demo corpus is **original summary text** for study purposes. Extend it with facts you verify, or with documents you have rights to index.
-- See [`SOURCES.md`](SOURCES.md) for suggested public pages to read; do not assume this repo’s text is an official Boltline or Stoke Space source of truth.
+The demo corpus in `corpus/` is original summary text about Stoke Space and Boltline. It is not an official source. Extend it with documents you have rights to index.
 
-## Interview talking points
-
-- **RAG** grounds the model on *your* documents, which reduces hallucinations versus a bare chat model on proprietary domains.
-- **Chunking and metadata** (here: source path + chunk index) matter for traceability of *why* an answer was produced—similar in spirit to hardware traceability themes in Boltline’s public story.
-- **Operational gaps:** production RAG adds auth, evaluation, re-ingest pipelines, hybrid search, and monitoring—this repo stays intentionally small.
+See [`SOURCES.md`](SOURCES.md) for suggested public reading.

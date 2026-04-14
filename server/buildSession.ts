@@ -1,6 +1,6 @@
 import session from "express-session";
 import { RedisStore } from "connect-redis";
-import { createClient, type RedisClientType } from "redis";
+import { getRedis } from "./redisClient.js";
 
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
 /** Redis TTL for session keys (seconds); keep in sync with cookie maxAge. */
@@ -30,12 +30,9 @@ export async function buildSessionMiddleware(
     cookie,
   };
 
-  const redisUrl = process.env.REDIS_URL?.trim();
-  if (redisUrl) {
-    try {
-      const client: RedisClientType = createClient({ url: redisUrl });
-      client.on("error", (err) => console.error("Redis session:", err));
-      await client.connect();
+  try {
+    const client = await getRedis();
+    if (client) {
       return session({
         ...base,
         store: new RedisStore({
@@ -44,10 +41,12 @@ export async function buildSessionMiddleware(
           ttl: THIRTY_DAYS_SEC,
         }),
       });
-    } catch (e) {
-      console.error("Redis connect failed; using MemoryStore:", e);
     }
-  } else if (process.env.VERCEL && process.env.NODE_ENV === "production") {
+  } catch (e) {
+    console.error("Redis connect failed; using MemoryStore:", e);
+  }
+
+  if (process.env.VERCEL && process.env.NODE_ENV === "production") {
     console.warn(
       "REDIS_URL not set — sessions use MemoryStore and logins can reset when another Vercel instance runs. Add Upstash Redis and REDIS_URL for persistent sessions."
     );

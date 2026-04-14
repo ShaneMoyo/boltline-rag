@@ -30,8 +30,111 @@
   font-size: 1rem;
 }
 
+.signin-hint {
+  margin: 0 0 0.25rem;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--muted);
+  text-align: left;
+  background: color-mix(in oklab, var(--panel) 88%, var(--border));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.signin-hint code {
+  font-size: 0.9em;
+}
+
 .google-btn-wrap {
   margin-top: 0.5rem;
+}
+
+.signin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  width: 100%;
+  max-width: 22rem;
+}
+
+.signin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.signin-field span {
+  font-weight: 500;
+}
+
+.signin-input {
+  font: inherit;
+  font-size: 1rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+}
+
+.signin-input:focus {
+  outline: 2px solid color-mix(in oklab, var(--accent) 55%, transparent);
+  outline-offset: 1px;
+}
+
+.signin-submit {
+  margin-top: 0.25rem;
+  width: 100%;
+}
+
+.signin-toggle {
+  margin: 0;
+  text-align: center;
+  font-size: 0.875rem;
+}
+
+.link-btn {
+  font: inherit;
+  font-size: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.link-btn:hover:not(:disabled) {
+  color: color-mix(in oklab, var(--accent) 85%, var(--text));
+}
+
+.link-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.signin-divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  max-width: 22rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.signin-divider::before,
+.signin-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
 }
 
 .signin-error {

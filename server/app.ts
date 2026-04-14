@@ -6,7 +6,15 @@ import { OAuth2Client } from "google-auth-library";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { CLIENT_DIST } from "../src/paths.js";
+import bcrypt from "bcryptjs";
 import { runRag } from "../src/rag.js";
+import {
+  createPasswordUser,
+  findPasswordUser,
+  isEmailPasswordAvailable,
+  isValidEmail,
+  normalizeEmail,
+} from "./emailPassword.js";
 import { buildSessionMiddleware } from "./buildSession.js";
 
 declare module "express-session" {
@@ -43,7 +51,12 @@ export async function createApp(): Promise<express.Express> {
   const sessionSecret = resolveSessionSecret();
 
   app.get("/api/health", (_req, res) => {
-    res.json({ ok: true, sessionConfigured: sessionSecret !== null });
+    res.json({
+      ok: true,
+      sessionConfigured: sessionSecret !== null,
+      emailPasswordAuth: Boolean(sessionSecret) && isEmailPasswordAvailable(),
+      googleAuth: Boolean(process.env.GOOGLE_CLIENT_ID),
+    });
   });
 
   if (!sessionSecret) {
@@ -64,6 +77,22 @@ export async function createApp(): Promise<express.Express> {
       standardHeaders: true,
       legacyHeaders: false,
       message: { error: "Too many requests — try again in 15 minutes." },
+    });
+
+    const authRegisterLimiter = rateLimit({
+      windowMs: 60 * 60 * 1000,
+      max: 20,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { error: "Too many registration attempts — try again later." },
+    });
+
+    const authLoginLimiter = rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 40,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: { error: "Too many sign-in attempts — try again in 15 minutes." },
     });
 
     const googleClientId = process.env.GOOGLE_CLIENT_ID;
@@ -108,6 +137,87 @@ export async function createApp(): Promise<express.Express> {
       }
     });
 
+    app.post("/api/auth/register", authRegisterLimiter, async (req, res) => {
+      if (!isEmailPasswordAvailable()) {
+        res.status(503).json({
+          error:
+            "Email sign-in needs REDIS_URL in production. Add Upstash Redis and set REDIS_URL on the server.",
+        });
+        return;
+      }
+      const emailRaw = typeof req.body?.email === "string" ? req.body.email : "";
+      const password = typeof req.body?.password === "string" ? req.body.password : "";
+      const nameRaw = typeof req.body?.name === "string" ? req.body.name : "";
+      const email = normalizeEmail(emailRaw);
+      const name = nameRaw.trim() || email.split("@")[0] || email;
+      if (!isValidEmail(email) || password.length < 8 || password.length > 128) {
+        res.status(400).json({
+          error: "Use a valid email and a password of 8–128 characters.",
+        });
+        return;
+      }
+      try {
+        if (await findPasswordUser(email)) {
+          res.status(409).json({ error: "An account with this email already exists." });
+          return;
+        }
+        const hash = await bcrypt.hash(password, 10);
+        await createPasswordUser(email, hash, name);
+        req.session.user = { email, name, picture: "" };
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error(saveErr);
+            res.status(500).json({ error: "Could not create session." });
+            return;
+          }
+          res.json({ user: req.session.user });
+        });
+      } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: "Registration failed." });
+      }
+    });
+
+    app.post("/api/auth/login", authLoginLimiter, async (req, res) => {
+      if (!isEmailPasswordAvailable()) {
+        res.status(503).json({
+          error:
+            "Email sign-in needs REDIS_URL in production. Add Upstash Redis and set REDIS_URL on the server.",
+        });
+        return;
+      }
+      const emailRaw = typeof req.body?.email === "string" ? req.body.email : "";
+      const password = typeof req.body?.password === "string" ? req.body.password : "";
+      const email = normalizeEmail(emailRaw);
+      if (!isValidEmail(email) || !password) {
+        res.status(400).json({ error: "Email and password are required." });
+        return;
+      }
+      try {
+        const row = await findPasswordUser(email);
+        if (!row || !(await bcrypt.compare(password, row.hash))) {
+          res.status(401).json({ error: "Invalid email or password." });
+          return;
+        }
+        req.session.user = {
+          email,
+          name: row.name,
+          picture: "",
+        };
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            console.error(saveErr);
+            res.status(500).json({ error: "Could not create session." });
+            return;
+          }
+          res.json({ user: req.session.user });
+        });
+      } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: "Sign-in failed." });
+      }
+    });
+
     app.post("/api/auth/logout", (req, res) => {
       req.session.destroy(() => {
         res.json({ ok: true });
@@ -133,7 +243,7 @@ export async function createApp(): Promise<express.Express> {
       next: express.NextFunction
     ): void {
       if (!req.session?.user) {
-        res.status(401).json({ error: "Sign in with Google to use this app." });
+        res.status(401).json({ error: "Sign in to use this app." });
         return;
       }
       next();

@@ -6,10 +6,22 @@ export type AuthUser = {
   picture: string;
 };
 
+type HealthJson = {
+  ok?: boolean;
+  sessionConfigured?: boolean;
+  emailPasswordAuth?: boolean;
+  googleAuth?: boolean;
+};
+
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [bootError, setBootError] = useState<string | null>(null);
+  /** Server will accept /api/auth/login and register (Redis in production, or dev in-memory). */
+  const [emailPasswordReady, setEmailPasswordReady] = useState(false);
+  /** Show email/password fields whenever SESSION_SECRET is configured (even if Redis still missing). */
+  const [showEmailPasswordForm, setShowEmailPasswordForm] = useState(false);
+  const [googleEnabled, setGoogleEnabled] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -21,18 +33,26 @@ export function useAuth() {
           );
           return;
         }
-        let healthJson: { ok?: boolean; sessionConfigured?: boolean } = {};
+        let healthJson: HealthJson = {};
         try {
-          healthJson = (await health.json()) as typeof healthJson;
+          healthJson = (await health.json()) as HealthJson;
         } catch {
           /* ignore */
         }
         if (healthJson.sessionConfigured === false) {
+          setShowEmailPasswordForm(false);
           setBootError(
             "SESSION_SECRET is not set on the server. In Vercel: Project → Settings → Environment Variables → add SESSION_SECRET (run openssl rand -hex 32), save, then Redeploy."
           );
           return;
         }
+        setShowEmailPasswordForm(true);
+        const viteGoogle = Boolean(
+          (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim()
+        );
+        setEmailPasswordReady(healthJson.emailPasswordAuth === true);
+        setGoogleEnabled(healthJson.googleAuth === true && viteGoogle);
+
         const me = await fetch("/api/auth/me", { credentials: "include" });
         if (me.ok) {
           const text = await me.text();
@@ -94,10 +114,66 @@ export function useAuth() {
     setUser(data.user);
   }, []);
 
+  const signInWithEmailPassword = useCallback(async (email: string, password: string) => {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    const text = await res.text();
+    let data: { error?: string; user?: AuthUser } = {};
+    if (text) {
+      try {
+        data = JSON.parse(text) as typeof data;
+      } catch {
+        throw new Error("Server returned invalid JSON.");
+      }
+    }
+    if (!res.ok) throw new Error(data.error ?? "Sign-in failed.");
+    if (!data.user) throw new Error("Sign-in succeeded but no user in response.");
+    setUser(data.user);
+  }, []);
+
+  const registerWithEmailPassword = useCallback(
+    async (email: string, password: string, name: string) => {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, name }),
+      });
+      const text = await res.text();
+      let data: { error?: string; user?: AuthUser } = {};
+      if (text) {
+        try {
+          data = JSON.parse(text) as typeof data;
+        } catch {
+          throw new Error("Server returned invalid JSON.");
+        }
+      }
+      if (!res.ok) throw new Error(data.error ?? "Registration failed.");
+      if (!data.user) throw new Error("Registration succeeded but no user in response.");
+      setUser(data.user);
+    },
+    []
+  );
+
   const signOut = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
     setUser(null);
   }, []);
 
-  return { user, loading, bootError, signInWithGoogle, signOut };
+  return {
+    user,
+    loading,
+    bootError,
+    emailPasswordReady,
+    showEmailPasswordForm,
+    googleEnabled,
+    signInWithGoogle,
+    signInWithEmailPassword,
+    registerWithEmailPassword,
+    signOut,
+  };
 }

@@ -79,7 +79,14 @@ app.post("/api/auth/google", async (req, res) => {
       name: payload.name ?? payload.email,
       picture: payload.picture ?? "",
     };
-    res.json({ user: req.session.user });
+    req.session.save((saveErr) => {
+      if (saveErr) {
+        console.error(saveErr);
+        res.status(500).json({ error: "Could not create session." });
+        return;
+      }
+      res.json({ user: req.session.user });
+    });
   } catch {
     res.status(401).json({ error: "Failed to verify Google token." });
   }

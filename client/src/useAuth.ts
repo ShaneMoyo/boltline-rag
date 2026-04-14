@@ -12,7 +12,16 @@ export function useAuth() {
 
   useEffect(() => {
     fetch("/api/auth/me", { credentials: "include" })
-      .then((r) => (r.ok ? r.json() : null))
+      .then(async (r) => {
+        if (!r.ok) return null;
+        const text = await r.text();
+        if (!text) return null;
+        try {
+          return JSON.parse(text) as { user?: AuthUser };
+        } catch {
+          return null;
+        }
+      })
       .then((data) => setUser(data?.user ?? null))
       .catch(() => setUser(null))
       .finally(() => setLoading(false));
@@ -25,9 +34,18 @@ export function useAuth() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ credential }),
     });
-    const data = await res.json();
+    const text = await res.text();
+    let data: { error?: string; user?: AuthUser } = {};
+    if (text) {
+      try {
+        data = JSON.parse(text) as typeof data;
+      } catch {
+        throw new Error("Server returned invalid JSON. Is the API running on port 3001?");
+      }
+    }
     if (!res.ok) throw new Error(data.error ?? "Sign-in failed.");
-    setUser(data.user as AuthUser);
+    if (!data.user) throw new Error("Sign-in succeeded but no user in response.");
+    setUser(data.user);
   }, []);
 
   const signOut = useCallback(async () => {

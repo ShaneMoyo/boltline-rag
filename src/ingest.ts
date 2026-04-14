@@ -1,14 +1,9 @@
 import "dotenv/config";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
-import { fileURLToPath } from "node:url";
 import { chunkMarkdown } from "./chunk.js";
 import { createOpenAIClient, embedTexts } from "./embed.js";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(__dirname, "..");
-const CORPUS_DIR = join(ROOT, "corpus");
-const INDEX_PATH = join(ROOT, "data", "index.json");
+import { CORPUS_DIR, INDEX_PATH, PROJECT_ROOT } from "./paths.js";
 
 export type PersistedChunk = {
   id: string;
@@ -44,7 +39,7 @@ async function main(): Promise<void> {
 
   const allChunks: ReturnType<typeof chunkMarkdown> = [];
   for (const filePath of paths) {
-    const rel = relative(ROOT, filePath);
+    const rel = relative(PROJECT_ROOT, filePath);
     const raw = await readFile(filePath, "utf8");
     allChunks.push(...chunkMarkdown(rel, raw));
   }
@@ -74,7 +69,7 @@ async function main(): Promise<void> {
 
   await mkdir(dirname(INDEX_PATH), { recursive: true });
   await writeFile(INDEX_PATH, JSON.stringify(index), "utf8");
-  console.error(`Wrote ${chunks.length} vectors to ${relative(ROOT, INDEX_PATH)}`);
+  console.error(`Wrote ${chunks.length} vectors to ${relative(PROJECT_ROOT, INDEX_PATH)}`);
 }
 
 main().catch((err) => {

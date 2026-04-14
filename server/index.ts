@@ -1,20 +1,117 @@
 import "dotenv/config";
 import cors from "cors";
 import express from "express";
+import rateLimit from "express-rate-limit";
+import session from "express-session";
+import { OAuth2Client } from "google-auth-library";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { CLIENT_DIST } from "../src/paths.js";
 import { runRag } from "../src/rag.js";
 
+declare module "express-session" {
+  interface SessionData {
+    user: { email: string; name: string; picture: string };
+  }
+}
+
 const app = express();
-app.use(cors());
+
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: "64kb" }));
+
+const sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret) {
+  throw new Error("SESSION_SECRET env var is required. Generate one with: openssl rand -hex 32");
+}
+
+app.use(
+  session({
+    secret: sessionSecret,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    },
+  })
+);
+
+const askLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests — try again in 15 minutes." },
+});
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
 });
 
-app.post("/api/ask", async (req, res) => {
+const googleClientId = process.env.GOOGLE_CLIENT_ID;
+const googleClient = googleClientId ? new OAuth2Client(googleClientId) : null;
+
+app.post("/api/auth/google", async (req, res) => {
+  if (!googleClient || !googleClientId) {
+    res.status(501).json({ error: "Google auth is not configured on this server." });
+    return;
+  }
+  const { credential } = req.body as { credential?: string };
+  if (!credential) {
+    res.status(400).json({ error: "Missing credential." });
+    return;
+  }
+  try {
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: googleClientId,
+    });
+    const payload = ticket.getPayload();
+    if (!payload?.email) {
+      res.status(401).json({ error: "Invalid Google token." });
+      return;
+    }
+    req.session.user = {
+      email: payload.email,
+      name: payload.name ?? payload.email,
+      picture: payload.picture ?? "",
+    };
+    res.json({ user: req.session.user });
+  } catch {
+    res.status(401).json({ error: "Failed to verify Google token." });
+  }
+});
+
+app.post("/api/auth/logout", (req, res) => {
+  req.session.destroy(() => {
+    res.json({ ok: true });
+  });
+});
+
+app.get("/api/auth/me", (req, res) => {
+  if (!req.session.user) {
+    res.status(401).json({ error: "Not authenticated." });
+    return;
+  }
+  res.json({ user: req.session.user });
+});
+
+function requireAuth(
+  req: express.Request,
+  res: express.Response,
+  next: express.NextFunction
+): void {
+  if (!req.session.user) {
+    res.status(401).json({ error: "Sign in with Google to use this app." });
+    return;
+  }
+  next();
+}
+
+app.post("/api/ask", askLimiter, requireAuth, async (req, res) => {
   try {
     const question =
       typeof req.body?.question === "string" ? req.body.question.trim() : "";
@@ -24,7 +121,7 @@ app.post("/api/ask", async (req, res) => {
         ? Math.min(20, Math.max(1, Math.floor(rawTop)))
         : 5;
     if (!question) {
-      res.status(400).json({ error: "Missing or invalid question" });
+      res.status(400).json({ error: "Missing or invalid question." });
       return;
     }
     const { answer, sources } = await runRag({ question, topK });

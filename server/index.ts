@@ -1,9 +1,8 @@
 import { createApp } from "./app.js";
 
-const app = createApp();
-
 const port = Number(process.env.PORT) || 3001;
 if (!process.env.VERCEL) {
+  const app = await createApp();
   app.listen(port, () => {
     console.error(`API server listening on http://localhost:${port}`);
     const gid = process.env.GOOGLE_CLIENT_ID;

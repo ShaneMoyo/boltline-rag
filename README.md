@@ -107,16 +107,17 @@ The repo includes [`vercel.json`](vercel.json): the Vite app is built to `client
    - `SESSION_SECRET` (e.g. `openssl rand -hex 32`)
    - `GOOGLE_CLIENT_ID` (server-side token verification)
    - `VITE_GOOGLE_CLIENT_ID` — **same value** as `GOOGLE_CLIENT_ID` (required at **build** time for the browser bundle)
+   - `REDIS_URL` — **recommended:** connection string from [Upstash Redis](https://upstash.com/) (or any Redis). Without it, sessions use memory only and **logouts can happen** when a different serverless instance handles your request.
 3. **Embeddings index:** `data/index.json` is gitignored. Either:
    - **Build-time ingest:** set **Build Command** to `npm run rag:ingest && npm run build` and ensure `OPENAI_API_KEY` is available to the build (same env var is enough), or
    - **Commit a built index:** remove `data/index.json` from `.gitignore`, run `npm run rag:ingest` locally, commit `data/index.json`, and keep **Build Command** as `npm run build`.
 4. **Google OAuth:** In Google Cloud Console → your Web client → **Authorized JavaScript origins**, add your production origin (e.g. `https://your-app.vercel.app`).
 
-**Caveat:** Sessions use the default in-memory store. On serverless, cookies can hit different instances, so sign-in may feel flaky until you move sessions to a shared store (e.g. Redis). For a demo, it is often acceptable.
+**Sessions:** With `REDIS_URL` set, sessions are stored in Redis (30-day rolling cookies, `sameSite: lax`). Without Redis on Vercel, the app falls back to an in-memory store per instance (unstable login).
 
 ## Security notes
 
-- Sessions are HTTP-only cookies; in production they are `secure` + `sameSite: strict`.
+- Sessions use HTTP-only cookies; in production they are `secure` with `sameSite: lax`.
 - `/api/ask` requires a valid session — unauthenticated requests get `401`.
 - Rate limiting caps abuse at 20 requests / 15 min per IP.
 - Set a hard **monthly spending limit** on your OpenAI account as a final backstop.

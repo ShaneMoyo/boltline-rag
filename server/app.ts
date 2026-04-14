@@ -2,12 +2,12 @@ import "dotenv/config";
 import cors from "cors";
 import express from "express";
 import rateLimit from "express-rate-limit";
-import session from "express-session";
 import { OAuth2Client } from "google-auth-library";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { CLIENT_DIST } from "../src/paths.js";
 import { runRag } from "../src/rag.js";
+import { buildSessionMiddleware } from "./buildSession.js";
 
 declare module "express-session" {
   interface SessionData {
@@ -32,7 +32,7 @@ function resolveSessionSecret(): string | null {
   return "dev-only-insecure-session-secret-do-not-use-in-production";
 }
 
-export function createApp(): express.Express {
+export async function createApp(): Promise<express.Express> {
   const app = express();
 
   app.set("trust proxy", 1);
@@ -56,19 +56,7 @@ export function createApp(): express.Express {
     app.use("/api/auth", noSession);
     app.post("/api/ask", noSession);
   } else {
-    app.use(
-      session({
-        secret: sessionSecret,
-        resave: false,
-        saveUninitialized: false,
-        cookie: {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
-          maxAge: 7 * 24 * 60 * 60 * 1000,
-        },
-      })
-    );
+    app.use(await buildSessionMiddleware(sessionSecret));
 
     const askLimiter = rateLimit({
       windowMs: 15 * 60 * 1000,

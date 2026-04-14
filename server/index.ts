@@ -17,6 +17,9 @@ declare module "express-session" {
 
 const app = express();
 
+// Vite dev proxy sends X-Forwarded-*; trust proxy avoids mis-detection and satisfies express-rate-limit
+app.set("trust proxy", 1);
+
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: "64kb" }));
 
@@ -87,7 +90,8 @@ app.post("/api/auth/google", async (req, res) => {
       }
       res.json({ user: req.session.user });
     });
-  } catch {
+  } catch (e) {
+    console.error(e);
     res.status(401).json({ error: "Failed to verify Google token." });
   }
 });
@@ -98,12 +102,17 @@ app.post("/api/auth/logout", (req, res) => {
   });
 });
 
-app.get("/api/auth/me", (req, res) => {
-  if (!req.session.user) {
-    res.status(401).json({ error: "Not authenticated." });
-    return;
+app.get("/api/auth/me", (req, res, next) => {
+  try {
+    const user = req.session?.user;
+    if (!user) {
+      res.status(401).json({ error: "Not authenticated." });
+      return;
+    }
+    res.json({ user });
+  } catch (e) {
+    next(e);
   }
-  res.json({ user: req.session.user });
 });
 
 function requireAuth(
@@ -111,7 +120,7 @@ function requireAuth(
   res: express.Response,
   next: express.NextFunction
 ): void {
-  if (!req.session.user) {
+  if (!req.session?.user) {
     res.status(401).json({ error: "Sign in with Google to use this app." });
     return;
   }
@@ -157,6 +166,20 @@ if (process.env.NODE_ENV === "production") {
     });
   });
 }
+
+app.use(
+  (
+    err: unknown,
+    _req: express.Request,
+    res: express.Response,
+    _next: express.NextFunction
+  ) => {
+    console.error(err);
+    if (res.headersSent) return;
+    const message = err instanceof Error ? err.message : "Server error";
+    res.status(500).json({ error: message });
+  }
+);
 
 const port = Number(process.env.PORT) || 3001;
 app.listen(port, () => {

@@ -26,6 +26,12 @@ A **Retrieval-Augmented Generation (RAG)** application for Stoke Space and Boltl
    - `https://your-deployed-app.com` (production)
 6. Copy the **Client ID** (looks like `1234567890-abc.apps.googleusercontent.com`)
 
+### Troubleshooting Google Sign-In
+
+- **`The given origin is not allowed for the given client ID`** — In Google Cloud Console, open your OAuth **Web client**, edit **Authorized JavaScript origins**, and add **exactly** `http://localhost:5173` (no trailing slash). Save, wait a minute, then hard-refresh the app.
+- **`initialize() is called multiple times`** — Fixed in the app by initializing GSI once; if you still see it, do a full page reload after changing env.
+- **`500` on `/api/auth/*`** — Run **`npm run dev`** so both the API (port 3001) and Vite (5173) are up. Do not run only `npm run dev:client` unless you point the API elsewhere.
+
 ## Setup
 
 ```bash

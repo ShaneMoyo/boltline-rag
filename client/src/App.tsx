@@ -30,24 +30,35 @@ type AskResponse = {
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
+/** GSI `initialize` must run once per page; React Strict Mode mounts twice otherwise. */
+let gsiInitialized = false;
+
 function SignInView({ onCredential }: { onCredential: (c: string) => Promise<void> }) {
   const btnRef = useRef<HTMLDivElement>(null);
   const [err, setErr] = useState<string | null>(null);
+  const handlerRef = useRef({ onCredential, setErr });
+  handlerRef.current = { onCredential, setErr };
 
   useEffect(() => {
     if (!GOOGLE_CLIENT_ID) return;
     const tryRender = () => {
       if (!window.google || !btnRef.current) return;
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: async ({ credential }) => {
-          try {
-            await onCredential(credential);
-          } catch (e) {
-            setErr(e instanceof Error ? e.message : "Sign-in failed.");
-          }
-        },
-      });
+      if (!gsiInitialized) {
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: async ({ credential }) => {
+            try {
+              await handlerRef.current.onCredential(credential);
+            } catch (e) {
+              handlerRef.current.setErr(
+                e instanceof Error ? e.message : "Sign-in failed."
+              );
+            }
+          },
+        });
+        gsiInitialized = true;
+      }
+      btnRef.current.innerHTML = "";
       window.google.accounts.id.renderButton(btnRef.current, {
         theme: "filled_black",
         size: "large",

@@ -1,12 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import request from "supertest";
 import type { Express } from "express";
+import type { RunRagFn } from "./routes/ask.js";
 
 const runRagMock = vi.fn();
-
-vi.mock("../src/rag.js", () => ({
-  runRag: (opts: unknown) => runRagMock(opts),
-}));
 
 describe("createApp (integration)", () => {
   let app: Express;
@@ -19,7 +16,7 @@ describe("createApp (integration)", () => {
     vi.stubEnv("REDIS_URL", "");
     vi.stubEnv("GOOGLE_CLIENT_ID", "");
     const { createApp } = await import("./app.js");
-    app = await createApp();
+    app = await createApp({ runRag: runRagMock as RunRagFn });
   });
 
   afterAll(() => {
@@ -76,8 +73,8 @@ describe("createApp (integration)", () => {
   });
 
   it("POST /api/ask uses mocked runRag when authenticated", async () => {
-    runRagMock.mockClear();
-    runRagMock.mockResolvedValue({
+    vi.mocked(runRagMock).mockClear();
+    vi.mocked(runRagMock).mockResolvedValue({
       answer: "stubbed-answer",
       sources: [],
     });
@@ -95,7 +92,7 @@ describe("createApp (integration)", () => {
 
     expect(res.body.answer).toBe("stubbed-answer");
     expect(res.body.sources).toEqual([]);
-    expect(runRagMock).toHaveBeenCalledWith(
+    expect(vi.mocked(runRagMock)).toHaveBeenCalledWith(
       expect.objectContaining({ question: "hello?", topK: 3 })
     );
   });

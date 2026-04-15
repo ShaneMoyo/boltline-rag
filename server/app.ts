@@ -2,7 +2,7 @@ import "dotenv/config";
 import "./sessionTypes.js";
 import cors from "cors";
 import express from "express";
-import rateLimit from "express-rate-limit";
+import { jsonRateLimit } from "./rateLimitJson.js";
 import { OAuth2Client } from "google-auth-library";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
@@ -66,28 +66,22 @@ export async function createApp(): Promise<express.Express> {
   } else {
     app.use(await buildSessionMiddleware(sessionSecret));
 
-    const askLimiter = rateLimit({
+    const askLimiter = jsonRateLimit({
       windowMs: 15 * 60 * 1000,
       max: 20,
-      standardHeaders: true,
-      legacyHeaders: false,
-      message: { error: "Too many requests — try again in 15 minutes." },
+      message: "Too many requests — try again in 15 minutes.",
     });
 
-    const authRegisterLimiter = rateLimit({
+    const authRegisterLimiter = jsonRateLimit({
       windowMs: 60 * 60 * 1000,
       max: 20,
-      standardHeaders: true,
-      legacyHeaders: false,
-      message: { error: "Too many registration attempts — try again later." },
+      message: "Too many registration attempts — try again later.",
     });
 
-    const authLoginLimiter = rateLimit({
+    const authLoginLimiter = jsonRateLimit({
       windowMs: 15 * 60 * 1000,
       max: 40,
-      standardHeaders: true,
-      legacyHeaders: false,
-      message: { error: "Too many sign-in attempts — try again in 15 minutes." },
+      message: "Too many sign-in attempts — try again in 15 minutes.",
     });
 
     const googleClientId = process.env.GOOGLE_CLIENT_ID;

@@ -11,6 +11,7 @@ import { buildSessionMiddleware } from "./buildSession.js";
 import { jsonRateLimit } from "./rateLimitJson.js";
 import { registerAskRoutes, type RunRagFn } from "./routes/ask.js";
 import { registerAuthRoutes } from "./routes/auth.js";
+import { registerConversationRoutes } from "./routes/conversations.js";
 import { registerHealthRoutes } from "./routes/health.js";
 
 export type CreateAppOptions = {
@@ -65,6 +66,12 @@ export async function createApp(options: CreateAppOptions = {}): Promise<express
       message: "Too many requests — try again in 15 minutes.",
     });
 
+    const conversationLimiter = jsonRateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 120,
+      message: "Too many conversation requests — try again in 15 minutes.",
+    });
+
     const authRegisterLimiter = jsonRateLimit({
       windowMs: 60 * 60 * 1000,
       max: 20,
@@ -88,6 +95,7 @@ export async function createApp(options: CreateAppOptions = {}): Promise<express
     });
 
     registerAskRoutes(app, askLimiter, runRagImpl);
+    registerConversationRoutes(app, conversationLimiter);
   }
 
   const isVercel = Boolean(process.env.VERCEL);

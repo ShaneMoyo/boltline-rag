@@ -145,10 +145,48 @@
   max-width: 28rem;
 }
 
-.app {
+.app-shell {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+  box-sizing: border-box;
+}
+
+.app-shell-ask {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  align-items: start;
+}
+
+@media (min-width: 768px) {
+  .app-shell-ask {
+    grid-template-columns: minmax(200px, 260px) minmax(0, 1fr);
+    gap: 1.25rem;
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+  }
+
+  .app-shell-ask .sidebar-mobile-toggle {
+    display: none;
+  }
+
+  .app-shell-ask .sidebar {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .app-shell-ask .app-main {
+    grid-column: 2;
+    grid-row: 1;
+  }
+}
+
+.app-main {
+  min-width: 0;
+  width: 100%;
   max-width: 44rem;
   margin: 0 auto;
-  padding: 2rem 1.25rem 4rem;
 }
 
 .header {
@@ -471,4 +509,181 @@
   line-height: 1.45;
   white-space: pre-wrap;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Conversation sidebar */
+.sidebar-mobile-toggle {
+  grid-column: 1 / -1;
+  margin-bottom: 0.75rem;
+  align-self: start;
+  display: inline-flex;
+  align-items: center;
+}
+
+.sidebar {
+  position: relative;
+  z-index: 20;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.75rem 0.65rem 1rem;
+  max-height: min(70vh, 28rem);
+  overflow: auto;
+}
+
+@media (max-width: 767.98px) {
+  .sidebar {
+    display: none;
+    position: fixed;
+    left: 0.75rem;
+    right: 0.75rem;
+    top: 4.5rem;
+    max-height: min(75vh, 32rem);
+    box-shadow: 0 12px 40px color-mix(in oklab, #000 35%, transparent);
+  }
+
+  .sidebar.sidebar-open {
+    display: block;
+  }
+}
+
+@media (min-width: 768px) {
+  .sidebar {
+    position: sticky;
+    top: 1rem;
+  }
+}
+
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: color-mix(in oklab, #000 45%, transparent);
+  cursor: pointer;
+}
+
+.sidebar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+  padding: 0 0.2rem;
+}
+
+.sidebar-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.btn-small {
+  font-size: 0.8rem;
+  padding: 0.35rem 0.65rem;
+}
+
+.sidebar-hint {
+  margin: 0.35rem 0.2rem 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.sidebar-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: stretch;
+  gap: 0.15rem;
+  margin-bottom: 0.35rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  overflow: hidden;
+}
+
+.sidebar-item-active {
+  border-color: var(--accent);
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+}
+
+.sidebar-item-main {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  font: inherit;
+  padding: 0.45rem 0.5rem;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+}
+
+.sidebar-item-main:hover {
+  background: color-mix(in oklab, var(--panel) 70%, var(--border));
+}
+
+.sidebar-item-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.sidebar-item-meta {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.sidebar-item-delete {
+  flex-shrink: 0;
+  width: 2rem;
+  font: inherit;
+  font-size: 1.15rem;
+  line-height: 1;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.sidebar-item-delete:hover {
+  color: var(--danger);
+  background: color-mix(in oklab, var(--danger) 15%, transparent);
+}
+
+.thread-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.thread-turn {
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--border);
+}
+
+.thread-turn:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.turn-thread-q .turn-heading {
+  font-size: 0.9rem;
+  margin: 0 0 0.5rem;
 }

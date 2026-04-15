@@ -1,4 +1,5 @@
 import type { AskResponse } from "./askTypes.ts";
+import type { Conversation } from "./conversationTypes.ts";
 
 type AskTabProps = {
   question: string;
@@ -7,9 +8,55 @@ type AskTabProps = {
   onTopKChange: (value: number) => void;
   asking: boolean;
   error: string | null;
-  result: AskResponse | null;
+  /** When history is unavailable, show the last Q/A here. */
+  ephemeralResult: AskResponse | null;
+  ephemeralQuestion: string | null;
+  /** Loaded conversation thread (includes persisted turns). */
+  thread: Conversation | null;
   onAsk: () => void;
 };
+
+function TurnPanels({
+  question,
+  answer,
+  sources,
+}: {
+  question: string;
+  answer: string;
+  sources: AskResponse["sources"];
+}) {
+  return (
+    <>
+      <section className="panel turn-thread-q">
+        <h2 className="turn-heading">Question</h2>
+        <div className="prose">{question}</div>
+      </section>
+      <section className="panel answer">
+        <h2>Answer</h2>
+        <div className="prose">{answer}</div>
+      </section>
+      <section className="panel sources">
+        <h2>Retrieved context</h2>
+        <p className="hint">
+          Similarity scores are cosine between the question embedding and each chunk.
+        </p>
+        <ul className="source-list">
+          {sources.map((s, i) => (
+            <li key={`${s.sourcePath}-${s.chunkIndex}-${i}`} className="source-item">
+              <div className="source-meta">
+                <span className="badge">{s.score.toFixed(4)}</span>
+                <span className="path">
+                  {s.sourcePath} #{s.chunkIndex}
+                </span>
+              </div>
+              <pre className="snippet">{s.text}</pre>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </>
+  );
+}
 
 export default function AskTab({
   question,
@@ -18,9 +65,13 @@ export default function AskTab({
   onTopKChange,
   asking,
   error,
-  result,
+  ephemeralResult,
+  ephemeralQuestion,
+  thread,
   onAsk,
 }: AskTabProps) {
+  const showEphemeral = Boolean(ephemeralResult && !thread && ephemeralQuestion);
+
   return (
     <div id="tab-panel-ask" role="tabpanel" aria-labelledby="tab-ask">
       <section className="panel" aria-busy={asking}>
@@ -63,32 +114,22 @@ export default function AskTab({
         {error ? <p className="err">{error}</p> : null}
       </section>
 
-      {result ? (
-        <>
-          <section className="panel answer">
-            <h2>Answer</h2>
-            <div className="prose">{result.answer}</div>
-          </section>
-          <section className="panel sources">
-            <h2>Retrieved context</h2>
-            <p className="hint">
-              Similarity scores are cosine between the question embedding and each chunk.
-            </p>
-            <ul className="source-list">
-              {result.sources.map((s, i) => (
-                <li key={`${s.sourcePath}-${s.chunkIndex}-${i}`} className="source-item">
-                  <div className="source-meta">
-                    <span className="badge">{s.score.toFixed(4)}</span>
-                    <span className="path">
-                      {s.sourcePath} #{s.chunkIndex}
-                    </span>
-                  </div>
-                  <pre className="snippet">{s.text}</pre>
-                </li>
-              ))}
-            </ul>
-          </section>
-        </>
+      {thread?.turns?.length ? (
+        <div className="thread-stack">
+          {thread.turns.map((turn) => (
+            <div key={turn.id} className="thread-turn">
+              <TurnPanels question={turn.question} answer={turn.answer} sources={turn.sources} />
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {showEphemeral && ephemeralResult && ephemeralQuestion ? (
+        <TurnPanels
+          question={ephemeralQuestion}
+          answer={ephemeralResult.answer}
+          sources={ephemeralResult.sources}
+        />
       ) : null}
     </div>
   );

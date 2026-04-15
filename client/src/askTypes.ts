@@ -8,4 +8,6 @@ export type Source = {
 export type AskResponse = {
   answer: string;
   sources: Source[];
+  /** Present when the exchange was saved to conversation history. */
+  conversationId?: string;
 };

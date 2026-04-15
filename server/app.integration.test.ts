@@ -92,8 +92,62 @@ describe("createApp (integration)", () => {
 
     expect(res.body.answer).toBe("stubbed-answer");
     expect(res.body.sources).toEqual([]);
+    expect(typeof res.body.conversationId).toBe("string");
     expect(vi.mocked(runRagMock)).toHaveBeenCalledWith(
       expect.objectContaining({ question: "hello?", topK: 3 })
     );
+  });
+
+  it("saves Q/A to conversation history and supports list, get, append, delete", async () => {
+    vi.mocked(runRagMock).mockResolvedValue({
+      answer: "first-answer",
+      sources: [{ sourcePath: "a.md", chunkIndex: 0, score: 0.9, text: "ctx" }],
+    });
+
+    const agent = request.agent(app);
+    const convEmail = `conv-${email}`;
+    await agent
+      .post("/api/auth/register")
+      .send({ email: convEmail, password, name: "Conv" })
+      .expect(200);
+
+    const first = await agent
+      .post("/api/ask")
+      .send({ question: "First question here?", topK: 5 })
+      .expect(200);
+
+    expect(first.body.answer).toBe("first-answer");
+    const cid = first.body.conversationId as string;
+    expect(cid).toBeTruthy();
+
+    const list = await agent.get("/api/conversations").expect(200);
+    expect(Array.isArray(list.body.conversations)).toBe(true);
+    expect(list.body.conversations.length).toBeGreaterThanOrEqual(1);
+    const hit = list.body.conversations.find((c: { id: string }) => c.id === cid);
+    expect(hit?.title).toBeTruthy();
+
+    const detail = await agent.get(`/api/conversations/${cid}`).expect(200);
+    expect(detail.body.conversation?.id).toBe(cid);
+    expect(detail.body.conversation?.turns?.length).toBe(1);
+    expect(detail.body.conversation?.turns?.[0]?.question).toContain("First question");
+
+    vi.mocked(runRagMock).mockResolvedValueOnce({
+      answer: "second-answer",
+      sources: [],
+    });
+
+    const second = await agent
+      .post("/api/ask")
+      .send({ question: "Follow-up?", topK: 5, conversationId: cid })
+      .expect(200);
+
+    expect(second.body.answer).toBe("second-answer");
+    expect(second.body.conversationId).toBe(cid);
+
+    const afterSecond = await agent.get(`/api/conversations/${cid}`).expect(200);
+    expect(afterSecond.body.conversation?.turns?.length).toBe(2);
+
+    await agent.delete(`/api/conversations/${cid}`).expect(200);
+    await agent.get(`/api/conversations/${cid}`).expect(404);
   });
 });

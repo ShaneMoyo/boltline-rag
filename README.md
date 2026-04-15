@@ -6,8 +6,9 @@ A **Retrieval-Augmented Generation (RAG)** application for Stoke Space and Boltl
 
 1. **Ingest:** `corpus/*.md` is chunked, embedded via OpenAI, and written to `data/index.json`.
 2. **Query:** The question is embedded; cosine similarity retrieves top-k chunks; the LLM answers with those snippets as context.
-3. **Auth:** Google Sign-In authenticates users; the server verifies the ID token, creates a session, and guards `/api/ask`.
-4. **Rate limiting:** 20 requests per IP per 15 minutes on `/api/ask`.
+3. **Auth:** Google Sign-In (or email/password when configured) authenticates users; the server creates a session and guards `/api/ask`.
+4. **Conversations:** Each signed-in user’s Q/A threads are stored server-side (Redis in production; in-memory in local dev without `REDIS_URL`) and listed in the Ask view sidebar.
+5. **Rate limiting:** 20 requests per IP per 15 minutes on `/api/ask`.
 
 ## Prerequisites
 

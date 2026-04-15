@@ -1,4 +1,4 @@
-import { Router, type Express, type RequestHandler } from "express";
+import { Router, type Express, type RequestHandler, type Response } from "express";
 import bcrypt from "bcryptjs";
 import type { OAuth2Client } from "google-auth-library";
 import {
@@ -8,6 +8,34 @@ import {
   isValidEmail,
   normalizeEmail,
 } from "../emailPassword.js";
+
+function isLikelyRedisStorageFailure(e: Error): boolean {
+  const m = e.message;
+  return (
+    /ECONNREFUSED|ETIMEDOUT|ENOTFOUND|WRONGPASS|NOAUTH|Socket closed|READONLY|Command timed out/i.test(m) ||
+    (m.includes("Redis") && /error|failed|connect|closed/i.test(m))
+  );
+}
+
+function respondAuthStorageError(res: Response, e: unknown, genericMessage: string): void {
+  console.error(e);
+  if (e instanceof Error) {
+    const msg = e.message;
+    if (msg.includes("REDIS_URL looks like") || msg.includes("REDIS_URL must start")) {
+      res.status(503).json({ error: msg });
+      return;
+    }
+    if (isLikelyRedisStorageFailure(e)) {
+      res.status(503).json({
+        error:
+          "Account storage (Redis) is unavailable. Set REDIS_URL to the Upstash Redis TCP URL (rediss://…), not the REST URL, then redeploy.",
+      });
+      return;
+    }
+  }
+  res.status(500).json({ error: genericMessage });
+}
+
 type AuthRouteDeps = {
   authRegisterLimiter: RequestHandler;
   authLoginLimiter: RequestHandler;
@@ -94,8 +122,7 @@ export function registerAuthRoutes(app: Express, deps: AuthRouteDeps): void {
         res.json({ user: req.session.user });
       });
     } catch (e) {
-      console.error(e);
-      res.status(500).json({ error: "Registration failed." });
+      respondAuthStorageError(res, e, "Registration failed.");
     }
   });
 
@@ -134,8 +161,7 @@ export function registerAuthRoutes(app: Express, deps: AuthRouteDeps): void {
         res.json({ user: req.session.user });
       });
     } catch (e) {
-      console.error(e);
-      res.status(500).json({ error: "Sign-in failed." });
+      respondAuthStorageError(res, e, "Sign-in failed.");
     }
   });
 

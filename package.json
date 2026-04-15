@@ -20,7 +20,7 @@
     "build:client": "npm run build -w boltline-rag-demo-web",
     "build": "npm run build:client",
     "start": "NODE_ENV=production tsx server/index.ts",
-    "test": "vitest run",
+    "test": "vitest run && npm run test -w boltline-rag-demo-web",
     "test:watch": "vitest",
     "test:unit": "vitest run src/**/*.test.ts server/**/*.test.ts",
     "test:integration": "vitest run server/**/*.integration.test.ts",

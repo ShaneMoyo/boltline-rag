@@ -2,6 +2,8 @@ node_modules/
 .env
 data/index.json
 .vercel
+/test-results/
+/playwright-report/
 
 # Stray emit if tsc ever writes JS next to vite.config.ts
 client/vite.config.js

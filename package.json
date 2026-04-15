@@ -14,6 +14,7 @@
     "rag:ingest": "tsx src/ingest.ts",
     "rag:ask": "tsx src/query.ts",
     "dev": "concurrently -k \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:e2e": "concurrently -k \"npm run dev:server\" \"npx wait-on -t 120000 http://127.0.0.1:3001/api/health && npm run dev:client\"",
     "dev:server": "tsx watch server/index.ts",
     "dev:client": "npm run dev -w boltline-rag-demo-web",
     "build:client": "npm run build -w boltline-rag-demo-web",
@@ -22,9 +23,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:unit": "vitest run src/**/*.test.ts server/**/*.test.ts",
-    "test:integration": "vitest run server/**/*.integration.test.ts"
+    "test:integration": "vitest run server/**/*.integration.test.ts",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
@@ -36,7 +39,8 @@
     "supertest": "^7.2.2",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.4",
+    "wait-on": "^9.0.5"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

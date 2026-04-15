@@ -8,6 +8,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   // Load `.env` from repo root so `VITE_*` vars live next to server `GOOGLE_CLIENT_ID`
   envDir: path.resolve(__dirname, ".."),
+  resolve: {
+    alias: {
+      "@shared": path.resolve(__dirname, "../shared"),
+    },
+  },
   plugins: [react()],
   server: {
     port: 5173,

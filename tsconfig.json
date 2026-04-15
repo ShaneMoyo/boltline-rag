@@ -12,6 +12,7 @@
     "esModuleInterop": true
   },
   "include": [
+    "shared/**/*.ts",
     "src/**/*.ts",
     "server/**/*.ts",
     "api/**/*.ts",

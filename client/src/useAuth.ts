@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
+import type { AuthUser } from "@shared/authUser.ts";
 
-export type AuthUser = {
-  email: string;
-  name: string;
-  picture: string;
-};
+export type { AuthUser };
 
 type HealthJson = {
   ok?: boolean;

@@ -8,6 +8,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   plugins: [react()],
   envDir: path.resolve(__dirname, ".."),
+  resolve: {
+    alias: {
+      "@shared": path.resolve(__dirname, "../shared"),
+    },
+  },
   test: {
     environment: "jsdom",
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],

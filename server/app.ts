@@ -1,4 +1,5 @@
 import "dotenv/config";
+import "./sessionTypes.js";
 import cors from "cors";
 import express from "express";
 import rateLimit from "express-rate-limit";
@@ -16,12 +17,6 @@ import {
   normalizeEmail,
 } from "./emailPassword.js";
 import { buildSessionMiddleware } from "./buildSession.js";
-
-declare module "express-session" {
-  interface SessionData {
-    user: { email: string; name: string; picture: string };
-  }
-}
 
 /** In production, missing SESSION_SECRET returns null so the app still boots (health + clear 503 on auth). */
 function resolveSessionSecret(): string | null {

@@ -24,6 +24,7 @@
     "test:watch": "vitest",
     "test:unit": "vitest run src/**/*.test.ts server/**/*.test.ts",
     "test:integration": "vitest run server/**/*.integration.test.ts",
+    "test:eval": "vitest run src/**/*.eval.test.ts",
     "test:e2e": "playwright test"
   },
   "devDependencies": {

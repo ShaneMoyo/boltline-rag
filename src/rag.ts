@@ -11,6 +11,21 @@ export type RagSource = {
   text: string;
 };
 
+/** Pure retrieval step: rank chunks by cosine similarity to a query embedding (for tests and eval). */
+export function retrieveByEmbedding(
+  index: PersistedIndex,
+  queryEmbedding: number[],
+  topK: number
+): RagSource[] {
+  const hits = topKChunks(index, queryEmbedding, topK);
+  return hits.map(({ chunk, score }) => ({
+    sourcePath: chunk.sourcePath,
+    chunkIndex: chunk.chunkIndex,
+    score,
+    text: chunk.text,
+  }));
+}
+
 export async function runRag(options: {
   question: string;
   topK?: number;
@@ -21,19 +36,11 @@ export async function runRag(options: {
 
   const client = createOpenAIClient();
   const [qEmb] = await embedTexts(client, [options.question], index.embeddingModel);
-  const hits = topKChunks(index, qEmb!, topK);
+  const sources = retrieveByEmbedding(index, qEmb!, topK);
 
-  const sources: RagSource[] = hits.map(({ chunk, score }) => ({
-    sourcePath: chunk.sourcePath,
-    chunkIndex: chunk.chunkIndex,
-    score,
-    text: chunk.text,
-  }));
-
-  const contextBlock = hits
+  const contextBlock = sources
     .map(
-      (h, i) =>
-        `### Snippet ${i + 1} (source: ${h.chunk.sourcePath})\n${h.chunk.text}`
+      (s, i) => `### Snippet ${i + 1} (source: ${s.sourcePath})\n${s.text}`
     )
     .join("\n\n");
 
